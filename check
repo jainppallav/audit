@@ -1,0 +1,46 @@
+#!/bin/bash
+###HOSTNAME
+hst=$(hostname)
+echo -e "Hostname: "`hostname -f` >> $hst.spec
+#echo ""  >> $hst.spec
+###MAKE AND MODEL
+echo -e "Make_and_Model:" `dmidecode --type System Information | grep -e "Manufacture" -e "Product Name" | cut -d":" -f2 | awk '{for(i=1;i<=NF;i++) {printf $i " "} ; printf " "}'`  >> $hst.spec
+#echo ""  >> $hst.spec
+###SERIAL NUMBER
+echo -e "System_Serial_Number:" `dmidecode -s system-serial-number`  >> $hst.spec
+#echo ""  >> $hst.spec
+###OS
+echo -e "OS:" `cat /etc/redhat-release` >> $hst.spec
+#echo "" >> $hst.spec
+###RAM
+#echo -e "RAM INFO" >> $hst.spec
+echo -e "Total_RAM:" `dmidecode --type 17 | grep -i size | cut -d':' -f2 | awk '{s+=$1} END {print s/1024,"GB"}'`"("` dmidecode --type 17 | grep -i size | cut -d':' -f2 | awk 'NR==1{print $1}'`*`dmidecode --type 17 | grep -i size | cut -d':' -f2 |awk '{for(i=1;i<=NF;i++) {printf $i " "} ; printf "\n"}' | grep -v "No"  | wc -l`")" >> $hst.spec
+rtype=$(dmidecode --type memory | tr -d "\t" | grep ^Type: | sort -u)
+echo "$rtype" >> $hst.spec
+#echo "" >> $hst.spec
+###CPU
+echo -e "CPU_family_and_Arch.:" `lscpu | grep -e 'Model name:' -e 'Socket(s):' | cut -d':' -f2 | awk '{for(i=1;i<=NF;i++) {printf $i " "} ; printf ""}' |  awk '{for(i=1;i<=NF;i++) {$1=$1"*" ;printf $i " "} ; printf ""}'` >> $hst.spec
+#echo "" >> $hst.spec
+###HARD DISK
+echo -e "Hard_disk(s):" `fdisk -l 2>&1 | grep Disk | grep dev | cut -d',' -f1` >> $hst.spec
+echo -e "Total_Storage_Size:" `fdisk -l 2>&1 | grep -e "Disk" | grep "dev" | cut -d":" -f2 | awk '{s+=$1} END {print s,"GB"}'` >> $hst.spec
+#echo "" >> $hst.spec
+###RAID CONTROLLER
+#echo -e "**RAID INFO**" >> $hst.spec
+#raid=$(lspci | grep -i raid |awk '{for(i=2;i<=NF;i++) {printf $i " "} ; printf "\n"}')
+raid=$(lspci | grep -i raid |awk '{for(i=2;i<=NF;i++) {printf $i " "} ; printf "\n"}' | cut -d ":" -f2 | tr -d " "| sed 's/:/-/g' | sed 's/,/ /g')
+echo "RAID: "$raid >> $hst.spec
+#echo "" >> $hst.spec
+###GRAPHICS CARD
+#echo -e "**Graphics card(s)**" >> $hst.spec
+#graphic=$(lspci | grep -i --color 'vga\|3d\|2d')
+graphic=$(lspci | grep -i --color 'vga\|3d\|2d' | awk '{for(i=2;i<=NF;i++) {printf $i " "} ; printf ""}'| sed 's/:/-/g' | sed 's/,/ /g')
+echo "Graphics_Card(s): "$graphic >> $hst.spec
+#echo "" >> $hst.spec
+###CD/DVDD
+FILE=/proc/sys/dev/cdrom/info
+if [ -f $FILE ]; then
+   echo "CD/DVD slots:" `cat /proc/sys/dev/cdrom/info | grep "drive # of slots" | cut -d":" -f2 | tr -d "\t"` >> $hst.spec
+else
+   echo -e "CD/DVD slotes: NO CD/DVD slots" >> $hst.spec
+fi
